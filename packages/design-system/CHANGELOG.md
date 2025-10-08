@@ -1,5 +1,16 @@
 # @strapi/design-system
 
+## 2.0.0-rc.31
+
+### Major Changes
+
+- [#1960](https://github.com/strapi/design-system/pull/1960) [`09ecec5`](https://github.com/strapi/design-system/commit/09ecec537fc95d5d374d09cb51053b80d576f4eb) Thanks [@butcherZ](https://github.com/butcherZ)! - fix clear button for DateTimePicker
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @strapi/ui-primitives@2.0.0-rc.31
+
 ## 2.0.0-rc.30
 
 ### Minor Changes
