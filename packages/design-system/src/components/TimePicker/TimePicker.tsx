@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Clock } from '@strapi/icons';
-import styled from 'styled-components';
+import { styled } from 'styled-components';
 
 import { useControllableState } from '../../hooks/useControllableState';
 import { useDateFormatter } from '../../hooks/useDateFormatter';
@@ -74,13 +74,43 @@ export const TimePicker = React.forwardRef<ComboboxInputElement, TimePickerProps
       return separator;
     }, [formatter]);
 
-    const timeOptions = React.useMemo(() => {
-      const stepCount = 60 / step;
+    // Enable virtualization for small steps that generate many options
+    // step=1 -> 1440 options, step=5 -> 288 options
+    const shouldVirtualize = step <= 5;
 
-      return [...Array(24).keys()].flatMap((hour) =>
-        [...Array(stepCount).keys()].map((minuteStep) => formatter.format(new Date(0, 0, 0, hour, minuteStep * step))),
-      );
-    }, [step, formatter]);
+    // Increase overscan for smoother scrolling with many items
+    const overscanCount = step === 1 ? 15 : 10;
+
+    // For virtualized lists, generate options lazily to avoid creating 1440 React elements upfront
+    // For non-virtualized lists, generate all options as before
+    const timeOptions = React.useMemo(() => {
+      if (!shouldVirtualize) {
+        // Non-virtualized: generate all options as before
+        const stepCount = 60 / step;
+        return [...Array(24).keys()].flatMap((hour) =>
+          [...Array(stepCount).keys()].map((minuteStep) =>
+            formatter.format(new Date(0, 0, 0, hour, minuteStep * step)),
+          ),
+        );
+      }
+
+      // Virtualized: return empty array and generate on-demand
+      return [];
+    }, [step, formatter, shouldVirtualize]);
+
+    // Generate time option on demand for virtualized lists
+    const getTimeOption = React.useCallback(
+      (index: number) => {
+        const stepCount = 60 / step;
+        const hour = Math.floor(index / stepCount);
+        const minuteStep = index % stepCount;
+        return formatter.format(new Date(0, 0, 0, hour, minuteStep * step));
+      },
+      [step, formatter],
+    );
+
+    // Calculate total count for virtualized lists
+    const totalTimeCount = (60 / step) * 24;
 
     const handleTextValueChange = (string?: string) => {
       if (!string || isNotAlphabeticalCharacter(string)) {
@@ -137,6 +167,19 @@ export const TimePicker = React.forwardRef<ComboboxInputElement, TimePickerProps
     const escapedSeparator = escapeForRegex(separator);
     const pattern = `\\d{2}${escapedSeparator}\\d{2}`;
 
+    // Render function for lazy virtualization
+    const renderTimeOption = React.useCallback(
+      (index: number) => {
+        const time = getTimeOption(index);
+        return (
+          <ComboboxOption key={time} value={time}>
+            {time}
+          </ComboboxOption>
+        );
+      },
+      [getTimeOption],
+    );
+
     return (
       <TimePickerCombobox
         {...restProps}
@@ -153,12 +196,17 @@ export const TimePicker = React.forwardRef<ComboboxInputElement, TimePickerProps
         textValue={textValue}
         onTextValueChange={handleTextValueChange}
         onBlur={handleBlur}
+        virtualized={shouldVirtualize}
+        overscan={overscanCount}
+        virtualItemCount={shouldVirtualize ? totalTimeCount : undefined}
+        renderVirtualItem={shouldVirtualize ? renderTimeOption : undefined}
       >
-        {timeOptions.map((time) => (
-          <ComboboxOption key={time} value={time}>
-            {time}
-          </ComboboxOption>
-        ))}
+        {!shouldVirtualize &&
+          timeOptions.map((time) => (
+            <ComboboxOption key={time} value={time}>
+              {time}
+            </ComboboxOption>
+          ))}
       </TimePickerCombobox>
     );
   },

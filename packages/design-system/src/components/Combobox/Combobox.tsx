@@ -19,6 +19,8 @@ import { Field, useField } from '../Field';
 import { IconButton } from '../IconButton';
 import { Loader } from '../Loader';
 
+import { VirtualizedList } from './VirtualizedList';
+
 /* -------------------------------------------------------------------------------------------------
  * ComboboxInput
  * -----------------------------------------------------------------------------------------------*/
@@ -64,6 +66,29 @@ interface ComboboxProps
    */
   size?: 'S' | 'M';
   startIcon?: React.ReactNode;
+  /**
+   * Enable virtualization for large lists
+   * @default false
+   */
+  virtualized?: boolean;
+  /**
+   * Estimated size of each item for virtualization
+   * @default 40
+   */
+  estimatedItemSize?: number;
+  /**
+   * Number of items to render outside visible area
+   * @default 5
+   */
+  overscan?: number;
+  /**
+   * For lazy virtualization: total item count
+   */
+  virtualItemCount?: number;
+  /**
+   * For lazy virtualization: function to render item by index
+   */
+  renderVirtualItem?: (index: number) => React.ReactNode;
 }
 
 type ComboboxInputElement = HTMLInputElement;
@@ -98,6 +123,11 @@ const Combobox = React.forwardRef<ComboboxInputElement, ComboboxProps>(
       onChange,
       onClear,
       onCreateOption,
+      virtualized = false,
+      estimatedItemSize = 40,
+      overscan = 5,
+      virtualItemCount,
+      renderVirtualItem,
       onFilterValueChange,
       onInputChange,
       onTextValueChange,
@@ -271,7 +301,18 @@ const Combobox = React.forwardRef<ComboboxInputElement, ComboboxProps>(
           <Content sideOffset={4}>
             <ComboboxPrimitive.Viewport ref={viewportRef}>
               <ScrollAreaCombobox>
-                {children}
+                {virtualized ? (
+                  <VirtualizedList
+                    estimatedItemSize={estimatedItemSize}
+                    overscan={overscan}
+                    itemCount={virtualItemCount}
+                    renderItem={renderVirtualItem}
+                  >
+                    {children}
+                  </VirtualizedList>
+                ) : (
+                  children
+                )}
                 {creatable !== true && !loading ? (
                   <ComboboxPrimitive.NoValueFound asChild>
                     <OptionBox $hasHover={false}>
